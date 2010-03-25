@@ -494,7 +494,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xe4, MODE_ZERO_PAGE,      3);
     OpcodeDetails(0xec, MODE_ABSOLUTE,       4);
 
-    param = m_accumulator - m_x;
+    param = m_x - param;
     m_sign = (param & 0x80) != 0;
     m_zero = param==0;
     m_carry = (param & 0x100) != 0;
@@ -505,7 +505,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xc4, MODE_ZERO_PAGE,      3);
     OpcodeDetails(0xcc, MODE_ABSOLUTE,       4);
 
-    param = m_accumulator - m_y;
+    param = m_y - param;
     m_sign = (param & 0x80) != 0;
     m_zero = param==0;
     m_carry = (param & 0x100) != 0;
