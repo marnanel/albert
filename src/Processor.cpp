@@ -166,6 +166,8 @@ void Processor::oneShot() {
     break;
     
   case MODE_BRANCH:
+    // todo: get rid of branchDisplacement and instead
+    // return the value, plus the current PC, in "address"
     branchDisplacement = m_memory->readByteFrom(m_programCounter);
     if (branchDisplacement & 0x80) {
       // It's negative; do the sign extension.
