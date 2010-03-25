@@ -24,6 +24,10 @@ class Processor: public QObject {
   int popFromStack();
 
  private:
+
+  int readParam(int address);
+  void writeParam(int address, int param);
+
   Memory *m_memory;
 
   int m_programCounter;

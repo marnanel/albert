@@ -3,6 +3,8 @@
 
 #define OpcodeDetails(opcode, mode, cycles) /* nothing */ ;
 
+const int accumulator_address = -1;
+
 typedef enum _Mode {
   MODE_IMPLIED,
   MODE_ZERO_PAGE_Y,
@@ -64,12 +66,27 @@ int Processor::popFromStack() {
   return m_memory->readByteFrom( 100 + m_stack);
 }
 
+int Processor::readParam(int address) {
+  if (address==accumulator_address) {
+    return m_accumulator;
+  } else {
+    return m_memory->readByteFrom(address);
+  }
+}
+
+void Processor::writeParam(int address, int param) {
+  if (address==accumulator_address) {
+    m_accumulator = param;
+  } else {
+    m_memory->writeByteTo(address, param);
+  }
+}
+
 void Processor::oneShot() {
 
   int opcode;
   int address = 0;
   int param = 0;
-  bool address_is_accumulator = false;
   int branchDisplacement = 0;
 
 #if 0
@@ -104,19 +121,18 @@ void Processor::oneShot() {
 
   case MODE_ZERO_PAGE:
     address = m_memory->readByteFrom(m_programCounter);
-    param = m_memory->readByteFrom(address);
     m_programCounter++;
     break;
 
   case MODE_ZERO_PAGE_Y:
     address = m_memory->readByteFrom(m_programCounter);
-    param = m_memory->readByteFrom(address+m_x);
+    address += m_x;
     m_programCounter++;
     break;
 
   case MODE_ZERO_PAGE_X:
     address = m_memory->readByteFrom(m_programCounter);
-    param = m_memory->readByteFrom(address+m_y);
+    address += m_y;
     m_programCounter++;
     break;
 
@@ -133,8 +149,6 @@ void Processor::oneShot() {
     m_programCounter++;
     address += m_x;
     address = m_memory->readWordFrom(address);
-    // we should have a flag to disable this read
-    param = m_memory->readByteFrom(address);    
     break;
 
   case MODE_INDIRECT_Y:
@@ -144,12 +158,10 @@ void Processor::oneShot() {
     m_programCounter++;
     address = m_memory->readWordFrom(address);
     address += m_y;
-    // we should have a flag to disable this read
-    param = m_memory->readByteFrom(address);
     break;
 
   case MODE_IMMEDIATE:
-    param = m_memory->readByteFrom(m_programCounter);
+    address = m_programCounter;
     m_programCounter++;
     break;
     
@@ -164,28 +176,21 @@ void Processor::oneShot() {
     
   case MODE_ABSOLUTE:
     address = m_memory->readWordFrom(m_programCounter);
-    // we may want to add a flag saying don't fetch the param
-    param = m_memory->readByteFrom(address);
     m_programCounter += 2;
     break;
 
   case MODE_ABSOLUTE_X:
     address = m_memory->readWordFrom(m_programCounter);
-    // we may want to add a flag saying don't fetch the param
-    param = m_memory->readByteFrom(address+m_x);
     m_programCounter += 2;
     break;
 
   case MODE_ABSOLUTE_Y:
     address = m_memory->readWordFrom(m_programCounter);
-    // we may want to add a flag saying don't fetch the param
-    param = m_memory->readByteFrom(address+m_y);
     m_programCounter += 2;
     break;
 
   case MODE_ACCUMULATOR:
-    address_is_accumulator = true;
-    param = m_accumulator;
+    address = accumulator_address;
     break;
 
   default:
@@ -269,7 +274,9 @@ void Processor::oneShot() {
     OpcodeDetails(0xb5, MODE_ZERO_PAGE_X,    4);
     OpcodeDetails(0xb9, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0xbd, MODE_ABSOLUTE_X,     4);
-    qDebug() << "Loading the accumulator with " << param;
+
+    param = this->readParam(address);
+    //qDebug() << "Loading the accumulator with " << param;
     m_accumulator = param;
     m_sign = (param & 0x80) != 0;
     m_zero = param == 0;
@@ -281,7 +288,9 @@ void Processor::oneShot() {
     OpcodeDetails(0xae, MODE_ABSOLUTE,       4);
     OpcodeDetails(0xb6, MODE_ZERO_PAGE_Y,    4);
     OpcodeDetails(0xbe, MODE_ABSOLUTE_Y,     4);
-    qDebug() << "Loading X with " << param;
+
+    param = this->readParam(address);
+    //qDebug() << "Loading X with " << param;
     m_x = param;
     m_sign = (param & 0x80) != 0;
     m_zero = param == 0;
@@ -293,7 +302,9 @@ void Processor::oneShot() {
     OpcodeDetails(0xac, MODE_ABSOLUTE,       4);
     OpcodeDetails(0xb4, MODE_ZERO_PAGE_X,    4);
     OpcodeDetails(0xbc, MODE_ABSOLUTE_X,     4);
-    qDebug() << "Loading Y with " << param;
+    //qDebug() << "Loading Y with " << param;
+
+    param = this->readParam(address);
     m_y = param;
     m_sign = (param & 0x80) != 0;
     m_zero = param == 0;
@@ -331,7 +342,7 @@ void Processor::oneShot() {
     OpcodeDetails(0x96, MODE_ZERO_PAGE_Y,    4);
     // Store X.
     // Does not affect the flags.
-    qDebug() << "Storing X to " << address;
+    //qDebug() << "Storing X to " << address;
     m_memory->writeByteTo(address, m_x);
     break;
 
@@ -341,7 +352,7 @@ void Processor::oneShot() {
     OpcodeDetails(0x94, MODE_ZERO_PAGE_X,    4);
     // Store Y.
     // Does not affect the flags.
-    qDebug() << "Storing Y to " << address;
+    //qDebug() << "Storing Y to " << address;
     m_memory->writeByteTo(address, m_y);
     break;
 
@@ -403,17 +414,13 @@ void Processor::oneShot() {
     OpcodeDetails(0x16, MODE_ZERO_PAGE_X,    6);
     OpcodeDetails(0x1e, MODE_ABSOLUTE_X,     7);
 
+    param = this->readParam(address);
     param = param << 1;
     m_carry = param & 0x100;
     param &= 0xFF;
     m_zero = param==0;
     m_sign = (param & 0x80) != 0;
-
-    if (address_is_accumulator) {
-      m_accumulator = param;
-    } else {
-      m_memory->writeByteTo(address, param);      
-    }
+    this->writeParam(address, param);
     break;
 
 
@@ -483,6 +490,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xd9, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0xdd, MODE_ABSOLUTE_X,     4);
 
+    param = this->readParam(address);
     param = m_accumulator - param;
     m_sign = (param & 0x80) != 0;
     m_zero = param==0;
@@ -494,6 +502,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xe4, MODE_ZERO_PAGE,      3);
     OpcodeDetails(0xec, MODE_ABSOLUTE,       4);
 
+    param = this->readParam(address);
     param = m_x - param;
     m_sign = (param & 0x80) != 0;
     m_zero = param==0;
@@ -505,6 +514,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xc4, MODE_ZERO_PAGE,      3);
     OpcodeDetails(0xcc, MODE_ABSOLUTE,       4);
 
+    param = this->readParam(address);
     param = m_y - param;
     m_sign = (param & 0x80) != 0;
     m_zero = param==0;
@@ -517,6 +527,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xf6, MODE_ZERO_PAGE_X,    6);
     OpcodeDetails(0xfe, MODE_ABSOLUTE_X,     7);
 
+    param = this->readParam(address);
     param = (param+1) & 0xFF;
     m_memory->writeByteTo(address, param);
     m_zero = param == 0;
@@ -529,6 +540,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xd6, MODE_ZERO_PAGE_X,    6);
     OpcodeDetails(0xde, MODE_ABSOLUTE_X,     7);
 
+    param = this->readParam(address);
     param = (param-1) & 0xFF;
     m_memory->writeByteTo(address, param);
     m_zero = param == 0;

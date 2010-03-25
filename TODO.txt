@@ -1,4 +1,3 @@
  - More opcodes
- - A flag to say not to fetch the param
  - Detect FRED/JIM/SHEILA writes
  - Implement some of SHEILA

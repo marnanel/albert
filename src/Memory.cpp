@@ -87,6 +87,21 @@ void Memory::writeByteTo(int position, int byte) {
     // Memory write.
     m_ram[position] = byte & 0xFF;
 
+  } else if (position>=0xFC00 && position<=0xFCFF) {
+
+    // FRED write.
+    qDebug() << "FRED write";
+
+  } else if (position>=0xFD00 && position<=0xFDFF) {
+
+    // JIM write.
+    qDebug() << "JIM write";
+
+  } else if (position>=0xFE00 && position<=0xFEFF) {
+
+    // SHEILA write.
+    qDebug() << "SHEILA write";
+
   } else {
 
     // Just ignore it.
