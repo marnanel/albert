@@ -1,3 +1,2 @@
  - More opcodes
- - Detect FRED/JIM/SHEILA writes
  - Implement some of SHEILA
