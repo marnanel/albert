@@ -57,13 +57,13 @@ Processor::Processor(Memory *memory):
 
 void Processor::pushToStack(int value) {
   m_memory->writeByteTo( 100 + m_stack,
-			 value);
+			 value & 0xFF);
   m_stack--;
 }
 
 int Processor::popFromStack() {
   m_stack++;
-  return m_memory->readByteFrom( 100 + m_stack);
+  return m_memory->readByteFrom( 100 + m_stack) & 0xFF;
 }
 
 int Processor::readParam(int address) {
@@ -549,6 +549,25 @@ void Processor::oneShot() {
     m_sign = (param & 0x80) != 0;
     break;
 
+  case OP_JSR:
+    OpcodeDetails(0x20, MODE_ABSOLUTE,       6);
+    m_programCounter--;
+    // FIXME: These may be in the wrong order;
+    // if so, some particularly spiffy programs may
+    // get confused.  If you change them, change RTS
+    // too, of course.
+    this->pushToStack( m_programCounter     & 0xFF);
+    this->pushToStack((m_programCounter>>8) & 0xFF);
+    m_programCounter = address;
+    break;
+
+  case OP_RTS:
+    OpcodeDetails(0x60, MODE_IMPLIED,        6);
+    m_programCounter = this->popFromStack() << 8;
+    m_programCounter |= this->popFromStack();
+    m_programCounter++;
+    break;
+
     ////////////////////////////////////////////////////////////////
 
   case OP_XXX:
@@ -568,9 +587,6 @@ void Processor::oneShot() {
     OpcodeDetails(0xf9, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0xfd, MODE_ABSOLUTE_X,     4);
 
-  case OP_JSR:
-    OpcodeDetails(0x20, MODE_ABSOLUTE,       6);
-
   case OP_AND:
     OpcodeDetails(0x21, MODE_INDIRECT_X,     6);
     OpcodeDetails(0x25, MODE_ZERO_PAGE,      2);
@@ -580,9 +596,6 @@ void Processor::oneShot() {
     OpcodeDetails(0x35, MODE_ZERO_PAGE_X,    3);
     OpcodeDetails(0x39, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0x3d, MODE_ABSOLUTE_X,     4);
-
-  case OP_RTS:
-    OpcodeDetails(0x60, MODE_IMPLIED,        6);
 
   case OP_ROR:
     OpcodeDetails(0x66, MODE_ZERO_PAGE,      5);
