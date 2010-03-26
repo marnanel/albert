@@ -49,6 +49,7 @@ Processor::Processor(Memory *memory):
   m_overflow = false;
   m_carry = false;
   m_interrupt = false;
+  m_break = false;
 
   m_waiting = 0;
 
@@ -88,6 +89,8 @@ void Processor::oneShot() {
   int address = 0;
   int param = 0;
   int branchDisplacement = 0;
+
+  //qDebug() << m_programCounter << this->disassemble(m_programCounter);
 
 #if 0
   if (m_goldenTrailPosition != -1) {
@@ -598,6 +601,41 @@ void Processor::oneShot() {
     this->writeParam(address, param);
     break;
     
+  case OP_BRK:
+    OpcodeDetails(0x00, MODE_IMPLIED,        7);
+
+    qDebug() << "Hit BRK; this is probably an error";
+    throw "Hit BRK";
+    break;
+
+  case OP_PHP:
+    OpcodeDetails(0x08, MODE_IMPLIED,        3);
+    param =
+      (m_carry?     0x01:0) |
+      (m_zero?      0x02:0) |
+      (m_interrupt? 0x04:0) |
+      (m_decimal?   0x08:0) |
+      (m_break?     0x10:0) |
+      (m_overflow?  0x40:0) |
+      (m_sign?      0x80:0);
+
+    this->pushToStack(param);
+    break;
+    
+  case OP_PLP:
+    OpcodeDetails(0x28, MODE_IMPLIED,        4);
+
+    param = this->popFromStack();
+
+    m_carry     = (param & 0x01) != 0;
+    m_zero      = (param & 0x02) != 0;
+    m_interrupt = (param & 0x04) != 0;
+    m_decimal   = (param & 0x08) != 0;
+    m_break     = (param & 0x10) != 0;
+    m_overflow  = (param & 0x40) != 0;
+    m_sign      = (param & 0x80) != 0;
+
+    break;
 
     ////////////////////////////////////////////////////////////////
 
@@ -676,18 +714,9 @@ void Processor::oneShot() {
     OpcodeDetails(0x79, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0x7d, MODE_ABSOLUTE_X,     4);
 
-  case OP_PHP:
-    OpcodeDetails(0x08, MODE_IMPLIED,        3);
-
-  case OP_PLP:
-    OpcodeDetails(0x28, MODE_IMPLIED,        4);
-
-  case OP_BRK:
-    OpcodeDetails(0x00, MODE_IMPLIED,        7);
-
   default:
     qDebug() << "Alert!  Unimplemented opcode encountered: " << QString("%2 %1").arg(opcode, 2, 16).arg(opnames.mid(opcodes[opcode].operation*4, 3));
-    //throw "Unimplemented opcode.";
+    throw "Unimplemented opcode.";
   }
 
 }

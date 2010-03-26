@@ -43,6 +43,7 @@ class Processor: public QObject {
   bool m_overflow;
   bool m_carry;
   bool m_interrupt;
+  bool m_break;
 
   int m_waiting;
 
