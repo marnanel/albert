@@ -1,6 +1,7 @@
 #include "Memory.h"
 #include <QFile>
 #include <QDebug>
+#include <stdio.h>
 
 // 0000 to 7FFF - RAM
 // 8000 to BFFF - one or more language ROMs
@@ -86,6 +87,11 @@ void Memory::writeByteTo(int position, int byte) {
 
     // Memory write.
     m_ram[position] = byte & 0xFF;
+
+    if (position>=0x7C00 && position<=0x7CFF) {
+      // Mode 7 memory write.  Just dump it for now.
+      printf("%c", byte);
+    }
 
   } else if (position>=0xFC00 && position<=0xFCFF) {
 
