@@ -58,7 +58,7 @@ int Memory::readByteFrom(int position) {
   } else if (position>=0xFE00 && position<=0xFEFF) {
 
     // SHEILA read.
-    qDebug() << "SHEILA read";
+    qDebug() << QString("SHEILA read %1").arg(position, 0, 16);
     return 0;
 
   } else if (position>=0xC000 && position<=0xFFFF) {
@@ -98,15 +98,39 @@ void Memory::writeByteTo(int position, int byte) {
     // FRED write.
     qDebug() << "FRED write";
 
+    // FC10 to FC13 - Teletext
+    // FC40 to FC43 - SCSI
+
   } else if (position>=0xFD00 && position<=0xFDFF) {
 
     // JIM write.
     qDebug() << "JIM write";
 
+    // FDF0 to FDF3 - SASI
+
   } else if (position>=0xFE00 && position<=0xFEFF) {
 
     // SHEILA write.
-    qDebug() << "SHEILA write";
+    // FE00 to FE07 - CRTC
+    // FE08 - ACIA Status
+    // FE09 - ACIA Data
+    // FE10 - SERPROC
+    // FE20 to FE23 - Video ULA
+    // FE30 to FE33 - Paged ROM selection
+    // FE4x - System VIA
+    // FE5x - System VIA
+    // FE6x - User VIA
+    // FE7x - User VIA
+    // FE8x - Disc 8271
+    // FE9x - Disc 8271
+    // FEAx - Econet (always return 0xFE because we don't support it)
+    // FEBx - Econet (always return 0xFE because we don't support it)
+    // FECx - ADVAL
+    // FEDx - ADVAL
+    // FEEx - Tube
+    // FEFx - Tube
+    
+    qDebug() << QString("SHEILA write %1 %2").arg(position, 0, 16).arg(byte, 0, 16);
 
   } else {
 
