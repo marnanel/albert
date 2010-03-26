@@ -90,7 +90,7 @@ void Processor::oneShot() {
   int param = 0;
   int branchDisplacement = 0;
 
-  //qDebug() << m_programCounter << this->disassemble(m_programCounter);
+  // qDebug() << m_programCounter << this->disassemble(m_programCounter);
 
 #if 0
   if (m_goldenTrailPosition != -1) {
@@ -637,6 +637,12 @@ void Processor::oneShot() {
 
     break;
 
+  case OP_JMP:
+    OpcodeDetails(0x4c, MODE_ABSOLUTE,       3);
+    OpcodeDetails(0x6c, MODE_INDIRECT,       5);
+    m_programCounter = address;
+    break;
+
     ////////////////////////////////////////////////////////////////
 
   case OP_XXX:
@@ -700,10 +706,6 @@ void Processor::oneShot() {
     OpcodeDetails(0x56, MODE_ZERO_PAGE_X,    6);
     OpcodeDetails(0x5e, MODE_ABSOLUTE_X,     7);
 
-  case OP_JMP:
-    OpcodeDetails(0x4c, MODE_ABSOLUTE,       3);
-    OpcodeDetails(0x6c, MODE_INDIRECT,       5);
-
   case OP_ADC:
     OpcodeDetails(0x61, MODE_INDIRECT_X,     6);
     OpcodeDetails(0x65, MODE_ZERO_PAGE,      3);
@@ -716,7 +718,7 @@ void Processor::oneShot() {
 
   default:
     qDebug() << "Alert!  Unimplemented opcode encountered: " << QString("%2 %1").arg(opcode, 2, 16).arg(opnames.mid(opcodes[opcode].operation*4, 3));
-    throw "Unimplemented opcode.";
+    //throw "Unimplemented opcode.";
   }
 
 }
