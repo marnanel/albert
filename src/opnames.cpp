@@ -37,9 +37,11 @@ typedef enum _Op {
   OP_NOP,  // 
   OP_ORA,  // 
   OP_PHA,  // 
+  OP_PHP,  // 
   OP_PLA,  // 
-  OP_ROL,  // 
-  OP_ROR,  // 
+  OP_PLP,  // 
+  OP_ROL,  // Rotate left
+  OP_ROR,   // Rotate right
   OP_RTI,  // 
   OP_RTS,  // 
   OP_SBC,  // 
@@ -96,7 +98,9 @@ QString opnames =
   "NOP "
   "ORA "
   "PHA "
+  "PHP "
   "PLA "
+  "PLP "
   "ROL "
   "ROR "
   "RTI "

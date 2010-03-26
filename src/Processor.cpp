@@ -531,7 +531,7 @@ void Processor::oneShot() {
 
     param = this->readParam(address);
     param = (param+1) & 0xFF;
-    m_memory->writeByteTo(address, param);
+    this->writeParam(address, param);
     m_zero = param == 0;
     m_sign = (param & 0x80) != 0;
     break;
@@ -544,7 +544,7 @@ void Processor::oneShot() {
 
     param = this->readParam(address);
     param = (param-1) & 0xFF;
-    m_memory->writeByteTo(address, param);
+    this->writeParam(address, param);
     m_zero = param == 0;
     m_sign = (param & 0x80) != 0;
     break;
@@ -567,6 +567,37 @@ void Processor::oneShot() {
     m_programCounter |= this->popFromStack();
     m_programCounter++;
     break;
+
+  case OP_ROR:  // Rotate right
+    OpcodeDetails(0x66, MODE_ZERO_PAGE,      5);
+    OpcodeDetails(0x6a, MODE_ACCUMULATOR,    2);
+    OpcodeDetails(0x6e, MODE_ABSOLUTE,       6);
+    OpcodeDetails(0x76, MODE_ZERO_PAGE_X,    6);
+    OpcodeDetails(0x7e, MODE_ABSOLUTE_X,     7);
+
+    param = this->readParam(address);
+    if (m_carry) {
+      param |= 0x100;
+    }
+    m_carry = (param & 0x1) != 0;
+    this->writeParam(address, param >> 1);
+    break;
+    
+  case OP_ROL: // Rotate left
+    OpcodeDetails(0x26, MODE_ZERO_PAGE,      5);
+    OpcodeDetails(0x2a, MODE_ACCUMULATOR,    2);
+    OpcodeDetails(0x2e, MODE_ABSOLUTE,       6);
+    OpcodeDetails(0x36, MODE_ZERO_PAGE_X,    6);
+    OpcodeDetails(0x3e, MODE_ABSOLUTE_X,     7);
+
+    param = this->readParam(address) << 1;
+    if (m_carry) {
+      param |= 0x1;
+    }
+    m_carry = (param & 0x100) != 0;
+    this->writeParam(address, param);
+    break;
+    
 
     ////////////////////////////////////////////////////////////////
 
@@ -596,13 +627,6 @@ void Processor::oneShot() {
     OpcodeDetails(0x35, MODE_ZERO_PAGE_X,    3);
     OpcodeDetails(0x39, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0x3d, MODE_ABSOLUTE_X,     4);
-
-  case OP_ROR:
-    OpcodeDetails(0x66, MODE_ZERO_PAGE,      5);
-    OpcodeDetails(0x6a, MODE_ACCUMULATOR,    2);
-    OpcodeDetails(0x6e, MODE_ABSOLUTE,       6);
-    OpcodeDetails(0x76, MODE_ZERO_PAGE_X,    6);
-    OpcodeDetails(0x7e, MODE_ABSOLUTE_X,     7);
 
   case OP_EOR:
     OpcodeDetails(0x41, MODE_INDIRECT_X,     6);
@@ -638,13 +662,6 @@ void Processor::oneShot() {
     OpcodeDetails(0x56, MODE_ZERO_PAGE_X,    6);
     OpcodeDetails(0x5e, MODE_ABSOLUTE_X,     7);
 
-  case OP_ROL:
-    OpcodeDetails(0x26, MODE_ZERO_PAGE,      5);
-    OpcodeDetails(0x2a, MODE_ACCUMULATOR,    2);
-    OpcodeDetails(0x2e, MODE_ABSOLUTE,       6);
-    OpcodeDetails(0x36, MODE_ZERO_PAGE_X,    6);
-    OpcodeDetails(0x3e, MODE_ABSOLUTE_X,     7);
-
   case OP_JMP:
     OpcodeDetails(0x4c, MODE_ABSOLUTE,       3);
     OpcodeDetails(0x6c, MODE_INDIRECT,       5);
@@ -659,12 +676,18 @@ void Processor::oneShot() {
     OpcodeDetails(0x79, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0x7d, MODE_ABSOLUTE_X,     4);
 
+  case OP_PHP:
+    OpcodeDetails(0x08, MODE_IMPLIED,        3);
+
+  case OP_PLP:
+    OpcodeDetails(0x28, MODE_IMPLIED,        4);
+
   case OP_BRK:
     OpcodeDetails(0x00, MODE_IMPLIED,        7);
 
   default:
     qDebug() << "Alert!  Unimplemented opcode encountered: " << QString("%2 %1").arg(opcode, 2, 16).arg(opnames.mid(opcodes[opcode].operation*4, 3));
-    throw "Unimplemented opcode.";
+    //throw "Unimplemented opcode.";
   }
 
 }

@@ -8,7 +8,7 @@ struct Opcode opcodes[256] = {
   { OP_ORA, MODE_ZERO_PAGE,      2 }, // 05
   { OP_ASL, MODE_ZERO_PAGE,      5 }, // 06
   { OP_XXX, MODE_IMPLIED,        0 }, // 07
-  { OP_XXX, MODE_IMPLIED,        0 }, // 08
+  { OP_PHP, MODE_IMPLIED,        3 }, // 08
   { OP_ORA, MODE_IMMEDIATE,      2 }, // 09
   { OP_ASL, MODE_ACCUMULATOR,    2 }, // 0a
   { OP_XXX, MODE_IMPLIED,        0 }, // 0b
@@ -40,7 +40,7 @@ struct Opcode opcodes[256] = {
   { OP_AND, MODE_ZERO_PAGE,      2 }, // 25
   { OP_ROL, MODE_ZERO_PAGE,      5 }, // 26
   { OP_XXX, MODE_IMPLIED,        0 }, // 27
-  { OP_XXX, MODE_IMPLIED,        0 }, // 28
+  { OP_PLP, MODE_IMPLIED,        4 }, // 28
   { OP_AND, MODE_IMMEDIATE,      2 }, // 29
   { OP_ROL, MODE_ACCUMULATOR,    2 }, // 2a
   { OP_XXX, MODE_IMPLIED,        0 }, // 2b
