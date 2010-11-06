@@ -31,10 +31,11 @@ struct Opcode {
 
 #include "opcodes.cpp"
 
-Processor::Processor(Memory *memory):
+Processor::Processor(Memory *memory, Clock *clock):
   QObject()
 {
   m_memory = memory;
+  m_clock = clock;
 
   m_programCounter = memory->readWordFrom(0xFFFC);
 
@@ -50,8 +51,6 @@ Processor::Processor(Memory *memory):
   m_carry = false;
   m_interrupt = false;
   m_break = false;
-
-  m_waiting = 0;
 
   m_goldenTrailPosition = 0;
 }
@@ -114,7 +113,8 @@ void Processor::oneShot() {
 #endif
 
   opcode = m_memory->readByteFrom(m_programCounter++);
-  m_waiting = opcodes[opcode].cycles;
+  // A machine cycle is two clock cycles.
+  m_clock->advance(opcodes[opcode].cycles * 2);
 
   switch (opcodes[opcode].mode) {
 
@@ -210,7 +210,7 @@ void Processor::oneShot() {
     OpcodeDetails(0x10, MODE_BRANCH,         2);
     if (!m_sign) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -218,7 +218,7 @@ void Processor::oneShot() {
     OpcodeDetails(0x30, MODE_BRANCH,         2);
     if (m_sign) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -226,7 +226,7 @@ void Processor::oneShot() {
     OpcodeDetails(0x50, MODE_BRANCH,         2);
     if (!m_overflow) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -234,7 +234,7 @@ void Processor::oneShot() {
     OpcodeDetails(0x70, MODE_BRANCH,         2);
     if (m_overflow) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -242,7 +242,7 @@ void Processor::oneShot() {
     OpcodeDetails(0x90, MODE_BRANCH,         2);
     if (!m_carry) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -250,7 +250,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xb0, MODE_BRANCH,         2);
     if (m_carry) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -258,7 +258,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xd0, MODE_BRANCH,         2);
     if (!m_zero) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -266,7 +266,7 @@ void Processor::oneShot() {
     OpcodeDetails(0xf0, MODE_BRANCH,         2);
     if (m_zero) {
       m_programCounter += branchDisplacement;
-      m_waiting++;
+      m_clock->advance(1);
     }
     break;
 
@@ -637,10 +637,89 @@ void Processor::oneShot() {
 
     break;
 
-  case OP_JMP:
+  case OP_JMP:  // Jump
     OpcodeDetails(0x4c, MODE_ABSOLUTE,       3);
     OpcodeDetails(0x6c, MODE_INDIRECT,       5);
     m_programCounter = address;
+    break;
+
+  case OP_LSR:  // Logical shift right
+    OpcodeDetails(0x46, MODE_ZERO_PAGE,      5);
+    OpcodeDetails(0x4a, MODE_ACCUMULATOR,    2);
+    OpcodeDetails(0x4e, MODE_ABSOLUTE,       6);
+    OpcodeDetails(0x56, MODE_ZERO_PAGE_X,    6);
+    OpcodeDetails(0x5e, MODE_ABSOLUTE_X,     7);
+
+    param = this->readParam(address);
+    m_carry = (param & 0x01) != 0;
+    if (param & 0x01) {
+      param |= 0x100;
+    }
+    param >>= 1;
+    m_zero = param == 0;
+    m_sign = (param & 0x80) != 0;
+    this->writeParam(address, param);
+    break;
+
+  case OP_AND: // Bitwise AND with accumulator
+    OpcodeDetails(0x21, MODE_INDIRECT_X,     6);
+    OpcodeDetails(0x25, MODE_ZERO_PAGE,      2);
+    OpcodeDetails(0x29, MODE_IMMEDIATE,      2);
+    OpcodeDetails(0x2d, MODE_ABSOLUTE,       4);
+    OpcodeDetails(0x31, MODE_INDIRECT_Y,     5);
+    OpcodeDetails(0x35, MODE_ZERO_PAGE_X,    3);
+    OpcodeDetails(0x39, MODE_ABSOLUTE_Y,     4);
+    OpcodeDetails(0x3d, MODE_ABSOLUTE_X,     4);
+
+    param = this->readParam(address);
+    param &= m_accumulator;
+    m_zero = param == 0;
+    m_sign = (param & 0x80) != 0;
+    this->writeParam(address, param);
+    break;
+
+  case OP_EOR: // Bitwise exclusive OR with accumulator
+    OpcodeDetails(0x41, MODE_INDIRECT_X,     6);
+    OpcodeDetails(0x45, MODE_ZERO_PAGE,      3);
+    OpcodeDetails(0x49, MODE_IMMEDIATE,      2);
+    OpcodeDetails(0x4d, MODE_ABSOLUTE,       4);
+    OpcodeDetails(0x51, MODE_INDIRECT_Y,     5);
+    OpcodeDetails(0x55, MODE_ZERO_PAGE_X,    4);
+    OpcodeDetails(0x59, MODE_ABSOLUTE_Y,     4);
+    OpcodeDetails(0x5d, MODE_ABSOLUTE_X,     4);
+
+    param = this->readParam(address);
+    param ^= m_accumulator;
+    m_zero = param == 0;
+    m_sign = (param & 0x80) != 0;
+    this->writeParam(address, param);
+    break;
+
+  case OP_ORA: // Bitwise OR with accumulator
+    OpcodeDetails(0x01, MODE_INDIRECT_X,     6);
+    OpcodeDetails(0x05, MODE_ZERO_PAGE,      2);
+    OpcodeDetails(0x09, MODE_IMMEDIATE,      2);
+    OpcodeDetails(0x0d, MODE_ABSOLUTE,       4);
+    OpcodeDetails(0x11, MODE_INDIRECT_Y,     5);
+    OpcodeDetails(0x15, MODE_ZERO_PAGE_X,    3);
+    OpcodeDetails(0x19, MODE_ABSOLUTE_Y,     4);
+    OpcodeDetails(0x1d, MODE_ABSOLUTE_X,     4);
+
+    param = this->readParam(address);
+    param |= m_accumulator;
+    m_zero = param == 0;
+    m_sign = (param & 0x80) != 0;
+    this->writeParam(address, param);
+    break;
+
+  case OP_BIT: // Test bits
+    OpcodeDetails(0x24, MODE_ZERO_PAGE,      3);
+    OpcodeDetails(0x2c, MODE_ABSOLUTE,       4);
+
+    param = this->readParam(address);
+    m_sign = (param & 0x80) != 0;
+    m_overflow = (param & 0x40) != 0;
+    m_zero = (param & m_accumulator) == 0;
     break;
 
     ////////////////////////////////////////////////////////////////
@@ -662,49 +741,8 @@ void Processor::oneShot() {
     OpcodeDetails(0xf9, MODE_ABSOLUTE_Y,     4);
     OpcodeDetails(0xfd, MODE_ABSOLUTE_X,     4);
 
-  case OP_AND:
-    OpcodeDetails(0x21, MODE_INDIRECT_X,     6);
-    OpcodeDetails(0x25, MODE_ZERO_PAGE,      2);
-    OpcodeDetails(0x29, MODE_IMMEDIATE,      2);
-    OpcodeDetails(0x2d, MODE_ABSOLUTE,       4);
-    OpcodeDetails(0x31, MODE_INDIRECT_Y,     5);
-    OpcodeDetails(0x35, MODE_ZERO_PAGE_X,    3);
-    OpcodeDetails(0x39, MODE_ABSOLUTE_Y,     4);
-    OpcodeDetails(0x3d, MODE_ABSOLUTE_X,     4);
-
-  case OP_EOR:
-    OpcodeDetails(0x41, MODE_INDIRECT_X,     6);
-    OpcodeDetails(0x45, MODE_ZERO_PAGE,      3);
-    OpcodeDetails(0x49, MODE_IMMEDIATE,      2);
-    OpcodeDetails(0x4d, MODE_ABSOLUTE,       4);
-    OpcodeDetails(0x51, MODE_INDIRECT_Y,     5);
-    OpcodeDetails(0x55, MODE_ZERO_PAGE_X,    4);
-    OpcodeDetails(0x59, MODE_ABSOLUTE_Y,     4);
-    OpcodeDetails(0x5d, MODE_ABSOLUTE_X,     4);
-
   case OP_RTI:
     OpcodeDetails(0x40, MODE_IMPLIED,        6);
-
-  case OP_ORA:
-    OpcodeDetails(0x01, MODE_INDIRECT_X,     6);
-    OpcodeDetails(0x05, MODE_ZERO_PAGE,      2);
-    OpcodeDetails(0x09, MODE_IMMEDIATE,      2);
-    OpcodeDetails(0x0d, MODE_ABSOLUTE,       4);
-    OpcodeDetails(0x11, MODE_INDIRECT_Y,     5);
-    OpcodeDetails(0x15, MODE_ZERO_PAGE_X,    3);
-    OpcodeDetails(0x19, MODE_ABSOLUTE_Y,     4);
-    OpcodeDetails(0x1d, MODE_ABSOLUTE_X,     4);
-
-  case OP_BIT:
-    OpcodeDetails(0x24, MODE_ZERO_PAGE,      3);
-    OpcodeDetails(0x2c, MODE_ABSOLUTE,       4);
-
-  case OP_LSR:
-    OpcodeDetails(0x46, MODE_ZERO_PAGE,      5);
-    OpcodeDetails(0x4a, MODE_ACCUMULATOR,    2);
-    OpcodeDetails(0x4e, MODE_ABSOLUTE,       6);
-    OpcodeDetails(0x56, MODE_ZERO_PAGE_X,    6);
-    OpcodeDetails(0x5e, MODE_ABSOLUTE_X,     7);
 
   case OP_ADC:
     OpcodeDetails(0x61, MODE_INDIRECT_X,     6);
@@ -725,20 +763,11 @@ void Processor::oneShot() {
 
 void Processor::runCycles(int count) {
 
-  if (m_waiting >= count) {
-    m_waiting -= count;
-    return;
-  }
+  unsigned long endTime = m_clock->getTime() + count;
 
-  int cyclesTaken = m_waiting;
-
-  while (cyclesTaken < count) {
-    m_waiting = 0;
-
+  do {
     this->oneShot();
-
-    cyclesTaken += m_waiting;
-  }
+  } while (m_clock->getTime() < endTime);
 
 }
 

@@ -2,7 +2,9 @@
 
 Application::Application(int argc, char**argv):
   QApplication(argc, argv),
-  m_processor(&m_memory)
+  m_memory(),
+  mSystemVIA(&m_memory),
+  m_processor(&m_memory, &m_clock)
 {
   this->startTimer(250);
 }

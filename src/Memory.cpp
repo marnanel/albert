@@ -1,7 +1,9 @@
-#include "Memory.h"
 #include <QFile>
 #include <QDebug>
 #include <stdio.h>
+
+#include "Memory.h"
+#include "MemoryMap.h"
 
 // 0000 to 7FFF - RAM
 // 8000 to BFFF - one or more language ROMs
@@ -43,23 +45,16 @@ int Memory::readByteFrom(int position) {
     // Language ROM read.
     return m_languageRom[position-0x8000] & 0xFF;
 
-  } else if (position>=0xFC00 && position<=0xFCFF) {
+  } else if (position>=0xFC00 && position<=0xFEFF) {
 
-    // FRED read.
-    qDebug() << "FRED read";
-    return 0;
+    // FRED/JIM/SHEILA read.
 
-  } else if (position>=0xFD00 && position<=0xFDFF) {
-
-    // JIM read.
-    qDebug() << "JIM read";
-    return 0;
-
-  } else if (position>=0xFE00 && position<=0xFEFF) {
-
-    // SHEILA read.
-    qDebug() << QString("SHEILA read %1").arg(position, 0, 16);
-    return 0;
+    if (mMemoryMap.contains(position)) {
+      return mMemoryMap[position]->read(position);
+    } else {
+      qDebug() << QString("Unknown FRED/JIM/SHEILA read %1").arg(position, 0, 16);
+      return 0;
+    }
 
   } else if (position>=0xC000 && position<=0xFFFF) {
 
@@ -93,24 +88,21 @@ void Memory::writeByteTo(int position, int byte) {
       printf("%c", byte);
     }
 
-  } else if (position>=0xFC00 && position<=0xFCFF) {
+  } else if (position>=0xFC00 && position<=0xFEFF) {
 
-    // FRED write.
-    qDebug() << "FRED write";
+    // FRED/JIM/SHEILA write.
 
+    // === FRED ===
+    //
     // FC10 to FC13 - Teletext
     // FC40 to FC43 - SCSI
 
-  } else if (position>=0xFD00 && position<=0xFDFF) {
-
-    // JIM write.
-    qDebug() << "JIM write";
-
+    // === JIM ===
+    //
     // FDF0 to FDF3 - SASI
 
-  } else if (position>=0xFE00 && position<=0xFEFF) {
-
-    // SHEILA write.
+    // === SHEILA ===
+    //
     // FE00 to FE07 - CRTC
     // FE08 - ACIA Status
     // FE09 - ACIA Data
@@ -130,7 +122,12 @@ void Memory::writeByteTo(int position, int byte) {
     // FEEx - Tube
     // FEFx - Tube
     
-    qDebug() << QString("SHEILA write %1 %2").arg(position, 0, 16).arg(byte, 0, 16);
+
+    if (mMemoryMap.contains(position)) {
+      mMemoryMap[position]->write(position, byte);
+    } else {
+      qDebug() << QString("Unknown FRED/JIM/SHEILA write %1 %2").arg(position, 0, 16).arg(byte, 0, 16);
+    }
 
   } else {
 
@@ -138,4 +135,13 @@ void Memory::writeByteTo(int position, int byte) {
 
   }
 
+}
+
+void Memory::hookMemoryMap(int startAddress,
+			   int endAddress,
+			   MemoryMap *map)
+{
+  for (int i=startAddress; i<=endAddress; i++) {
+    mMemoryMap[i] = map;
+  }
 }

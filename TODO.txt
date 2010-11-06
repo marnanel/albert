@@ -1,2 +1,3 @@
- - More opcodes
- - Implement some of SHEILA
+ - Add the ability for separate classes to hook into particular addresses in F/J/S
+ - Document the behaviour of the system VIA when read and written to
+

@@ -2,13 +2,15 @@
 #define PROCESSOR_H 1
 
 #include "Memory.h"
+#include "Clock.h"
 
 class Processor: public QObject {
 
   Q_OBJECT
 
  public:
-  Processor(Memory *memory);
+  Processor(Memory *memory,
+	    Clock *clock);
 
   void oneShot();
 
@@ -29,6 +31,7 @@ class Processor: public QObject {
   void writeParam(int address, int param);
 
   Memory *m_memory;
+  Clock *m_clock;
 
   int m_programCounter;
 
@@ -44,8 +47,6 @@ class Processor: public QObject {
   bool m_carry;
   bool m_interrupt;
   bool m_break;
-
-  int m_waiting;
 
   int m_goldenTrailPosition;
 };

@@ -3,6 +3,7 @@
 
 #include "Memory.h"
 #include "Processor.h"
+#include "SystemVIA.h"
 #include <QApplication>
 
 class Application: public QApplication {
@@ -17,6 +18,8 @@ class Application: public QApplication {
 
  private:
   Memory m_memory;
+  Clock m_clock;
+  SystemVIA mSystemVIA;
   Processor m_processor;
 };
 
